@@ -1,6 +1,6 @@
 import time
 from math import sqrt
-import numpy as GPIO
+import Jetson.GPIO as GPIO
 import ctypes
 
 # we are using stepper motor drivers and we only care about two pins
@@ -369,12 +369,13 @@ class Stepper:
     Called to execute a step. Only called when a step is required.
     The minimum pulse width for the Stepperonline DM542T is 2.5 microseconds.
     """
-    def step(self, step):
+    def step(self):
         
         #TODO in the AccelStepper library they set the direction pins each time?
         # should I also do that? how would I change direction?
         # not enough familiarity to know how this will effect code performance
-        GPIO.output(self.pulsePin, GPIO, GPIO.HIGH)
+        print("stepping")
+        GPIO.output(self.pulsePin, GPIO.HIGH)
         Stepper.usleep(self._minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulsePin, GPIO.LOW)
 
@@ -422,7 +423,7 @@ class Stepper:
         Stepper.libc.usleep(int(microseconds))
 
 if __name__ == '__main__':
-    motor = Stepper()
+    motor = Stepper(11, 13, 15)
     motor.setMaxSpeed(4000) # max speed is 4000 pulses per second
     motor.setSpeed(0)
     motor.setAcceleration(1000)
@@ -430,8 +431,8 @@ if __name__ == '__main__':
     # TODO make set speed blocking?
     motor.setSpeed(1000) # sets speed to 1000 pulses per second
     # will run the motor at the defined speed until count is achieved.
-    for i in range(10000):
-        motor.runSpeed()
+    while True:    
+        motor.step()
     # TODO make moving to a position blocking. idk if it makes sense to make speed blocking?
     # the speed defines how often we sleep in between cycles.
     
