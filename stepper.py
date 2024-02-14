@@ -405,7 +405,7 @@ class Stepper:
         GPIO.setup(self.enablePin, GPIO.OUT)  # output pin
 
         GPIO.output(self.enablePin, GPIO.LOW) # turn motors on
-        GPIO.output(self.dirPin, GPIO.LOW)    # I think low is clockwise
+        GPIO.output(self.dirPin, GPIO.HIGH)    # HIGH is ccw
         GPIO.output(self.pulsePin, GPIO.LOW)  # no pulse 
 
     """
@@ -433,7 +433,8 @@ if __name__ == '__main__':
     # will run the motor at the defined speed until count is achieved.
     while True:    
         # GPIO.output(motor.pulsePin, GPIO.HIGH)
-        motor.step()
+        motor.moveTo(1600)
+        motor.run()
     # TODO make moving to a position blocking. idk if it makes sense to make speed blocking?
     # the speed defines how often we sleep in between cycles.
     
