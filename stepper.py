@@ -5,8 +5,8 @@ import ctypes
 
 # we are using stepper motor drivers and we only care about two pins
 class Stepper:
-    CCW = 0
-    CW = 1
+    CCW = 1
+    CW = 0
     libc = ctypes.CDLL("libc.so.6") # Load the C library
     GPIO.setmode(GPIO.BOARD)
 
@@ -432,6 +432,7 @@ if __name__ == '__main__':
     motor.setSpeed(1000) # sets speed to 1000 pulses per second
     # will run the motor at the defined speed until count is achieved.
     while True:    
+        # GPIO.output(motor.pulsePin, GPIO.HIGH)
         motor.step()
     # TODO make moving to a position blocking. idk if it makes sense to make speed blocking?
     # the speed defines how often we sleep in between cycles.
