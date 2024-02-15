@@ -52,16 +52,14 @@ class Stepper:
         delta_p = self.getChangeInPosition() # [ pulses ]
         
         # calculates the maximum velocity
-        v_max = delta_p / interpolation_time_in_ms              # [ pulses / ms ]
+        v_max = 1.5 * (delta_p / interpolation_time_in_ms)              # [ pulses / ms ]
         
         # time of each trapezoidal section in milliseconds.
         ta = tb = tc = interpolation_time_in_ms / 3                 # [ ms ]
-        a = Stepper.calculate_acceleration(v_max, delta_p)          # [ p / ms^2 ]
+        a = 0.02         # [ p / ms^2 ]
         decelerating_distance = v_max * (1.5*ta)             # distance to start stopping
-        
-        if decelerating_distance > delta_p / 2:
-            decelerating_distance = decelerating_distance / 2
-        
+        q = decelerating_distance 
+                
         pulses = 0
         decelerating = False
 
@@ -74,21 +72,22 @@ class Stepper:
         while self.currentPos != absolute:
             
             # get the time we have to wait until we can step
-            self.stepInterval = 1 / v_t # this equation is given by the period. we want one pulse every v_t
+            self.stepInterval =  min(70, 1 / v_t) # this equation is given by the period. we want one pulse every v_t
             
             # while we havent reached our step interval, we wait
             # keep polling the time, once the current time - the start time >= our step interval we good
-            while self.getTime() - start_time >= self.stepInterval:
+            while self.getTime() - start_time <= self.stepInterval:
                 pass
-
             # step interval has passed, so now we pulse
             self.step()
             # increment pulses travelled variable
             pulses += 1
+            self.currentPos += 1
             # accelerates
 
+            print(pulses, v_t)
             # check if it is time to decelerate
-            if pulses == decelerating_distance:
+            if pulses >= decelerating_distance:
                 decelerating = True
 
             # if we are accelerating, we increment v_t for the next step interval
@@ -98,21 +97,22 @@ class Stepper:
                     v_t = v_max
             
             if decelerating:
-                v_t -= a*acceleration_increment
+                if v_t <= 0:
+                    v_t = 0.001
+                else:
+                    v_t -= a*acceleration_increment
                 # velocity should only be an integer
                 # acceleration should also only be an integer (?) 
-                if v_t <= 0:
-                    return
-                
-            start_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND)
+                                
+            start_time = int(time.time() * Stepper.MILLISECONDS_IN_SECOND)
     
     def getChangeInPosition(self):
         return self.targetPos - self.currentPos
     
     def step(self):
-        print("stepping")
+        print(self.currentPos)
         GPIO.output(self.pulsePin, GPIO.HIGH)
-        Stepper.usleep(self._minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
+        Stepper.usleep(self.minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulsePin, GPIO.LOW)
 
     # returns time in microseconds since epoch 1970 
@@ -150,4 +150,9 @@ class Stepper:
         delta_solution = fsolve(equation, initial_guess, args=(velocity, total_distance))[0]
 
         return round(delta_solution, 5)
-    
+   
+
+if __name__ == '__main__':
+    motor = Stepper(11, 13, 15)
+    motor.moveAbsolute(1600, 1)
+    print("arrived")
