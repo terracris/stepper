@@ -80,35 +80,6 @@ class Stepper:
         
         return self._speed != 0.0 or self.getDistanceToGo != 0
 
-    """
-    Poll the motor and step it if a step is due, implementing a constant speed as set by the most recent
-    call to setSpeed(). You must call this as frequently as possible but at least once per step interval,
-
-    Returns a boolean. True if the motor was stepped.
-    """
-    def runSpeed(self):
-        # don't do anything unless we actually have a step interval 
-        if not self._stepInterval:
-            return False
-        
-        # number of microseconds
-        currTime = time.time() * 1e6
-
-        if currTime - self._lastStepTime >= self._stepInterval:
-            if self.direction == Stepper.CW:
-                # clockwise
-                self._currentPos += 1
-            else:
-                # counter clockwise
-                self._currentPos -= 1
-
-            self.step(self._currentPos)
-            self._lastStepTime = currTime # caution: does not account for costs in step()
-
-            return True
-        
-        return False
-            
 
     """
     Sets the maximum permitted speed. The run() function will accelerate up to the speed set by this function.
