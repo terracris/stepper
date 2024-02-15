@@ -3,7 +3,7 @@ import numpy as np
 
 # Define the equation
 def equation(delta):
-    return 0.577 * delta - 1.6 * np.exp(-533.6 * delta)
+    return 0.577 * delta - 1.6 * np.exp(-266.4 * delta)
 
 # Initial guess for delta
 initial_guess = 0.001

@@ -119,6 +119,22 @@ class Stepper:
     def getTime(self):
         return int(time.time() * Stepper.MILLISECONDS_IN_SECOND)
     
+    def setOutputPins(self):
+        GPIO.setup(self.pulsePin, GPIO.OUT)   # output pin 
+        GPIO.setup(self.dirPin, GPIO.OUT)     # output pin
+        GPIO.setup(self.enablePin, GPIO.OUT)  # output pin
+
+        GPIO.output(self.enablePin, GPIO.LOW) # turn motors on
+        GPIO.output(self.dirPin, GPIO.HIGH)    # HIGH is ccw
+        GPIO.output(self.pulsePin, GPIO.LOW)  # no pulse 
+
+    @staticmethod
+    def usleep(microseconds):
+        """
+        Sleep for the given number of microseconds.
+        """ 
+        Stepper.libc.usleep(int(microseconds))
+
     @staticmethod
     def calculate_acceleration(velocity, total_distance):
 
