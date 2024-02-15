@@ -1,13 +1,15 @@
 import time
+import ctypes
+import numpy as np
 from math import sqrt
 import Jetson.GPIO as GPIO
-import ctypes
+from scipy.optimize import fsolve
 
 class Stepper:
     CCW = 1
     CW = 0
     libc = ctypes.CDLL("libc.so.6") # Load the C library
-    MICROSECONDS_IN_SECOND = 1e6    # number of microseconds in one second
+    MILLISECONDS_IN_SECOND = 1000    # number of milliseconds in one second
     GPIO.setmode(GPIO.BOARD)
 
     def __init__(self, pulsePin, dirPin, enablePin):
@@ -43,46 +45,66 @@ class Stepper:
         else:
             self.targetPos = absolute
         
+        # calculates the interpolation time in ms (resolution of all actions are in milliseconds)
+        interpolation_time_in_ms = interpolation_time * Stepper.MILLISECONDS_IN_SECOND
+        
         # get the number of pulses we have to travel
-        delta_p = self.getChangeInPosition()
+        delta_p = self.getChangeInPosition() # [ pulses ]
+        
         # calculates the maximum velocity
-        v_max = delta_p / interpolation_time
-        ta = tb = tc = interpolation_time / 3
-        a = v_max / ta
-        decelerating_distance = v_max * (1.5*ta) # distance to start stopping
+        v_max = delta_p / interpolation_time_in_ms              # [ pulses / ms ]
+        
+        # time of each trapezoidal section in milliseconds.
+        ta = tb = tc = interpolation_time_in_ms / 3                 # [ ms ]
+        a = Stepper.calculate_acceleration(v_max, delta_p)          # [ p / ms^2 ]
+        decelerating_distance = v_max * (1.5*ta)             # distance to start stopping
+        
+        if decelerating_distance > delta_p / 2:
+            decelerating_distance = decelerating_distance / 2
+        
         pulses = 0
         decelerating = False
 
+        start_time = self.getTime() # current time in milliseconds
+        acceleration_increment = 1
+
+        v_t = a # a equals the acceleration at time 1
         
-        start_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND) # current time in microseconds since the epoch
         # while we are not where we want to be
         while self.currentPos != absolute:
-            # calculate the change in position
-            current_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND) # current time in microseconds
-            change_in_time = current_time - start_time
+            
+            # get the time we have to wait until we can step
+            self.stepInterval = 1 / v_t # this equation is given by the period. we want one pulse every v_t
+            
+            # while we havent reached our step interval, we wait
+            # keep polling the time, once the current time - the start time >= our step interval we good
+            while self.getTime() - start_time >= self.stepInterval:
+                pass
 
+            # step interval has passed, so now we pulse
+            self.step()
+            # increment pulses travelled variable
+            pulses += 1
             # accelerates
-            if not decelerating:
-                v_t += a*change_in_time
-                if v_t > v_max:
-                    v_t = v_max
 
+            # check if it is time to decelerate
             if pulses == decelerating_distance:
                 decelerating = True
+
+            # if we are accelerating, we increment v_t for the next step interval
+            if not decelerating:
+                v_t += a*acceleration_increment
+                if v_t > v_max:
+                    v_t = v_max
             
             if decelerating:
-                v_t -= a*change_in_time
+                v_t -= a*acceleration_increment
                 # velocity should only be an integer
                 # acceleration should also only be an integer (?) 
                 if v_t <= 0:
                     return
-
-            self.stepInterval = Stepper.MICROSECONDS_IN_SECOND / v_t
-
-            if change_in_time >= self.stepInterval:
-                pulses += 1
-                self.step()
-                start_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND)
+                
+            start_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND)
     
     def getChangeInPosition(self):
         return self.targetPos - self.currentPos
@@ -95,4 +117,21 @@ class Stepper:
 
     # returns time in microseconds since epoch 1970 
     def getTime(self):
-        return int(time.time() * 1e6)
+        return int(time.time() * Stepper.MILLISECONDS_IN_SECOND)
+    
+    @staticmethod
+    def calculate_acceleration(velocity, total_distance):
+
+        def equation(delta, v_max, distance):
+            # euler mascheroni constant
+            euler_mascheroni_constant = 0.577
+            return euler_mascheroni_constant * delta - v_max * np.exp(-distance * delta)
+        
+        # initial guess for delta
+        initial_guess = 0.001
+
+        # solve the equation
+        delta_solution = fsolve(equation, initial_guess, args=(velocity, total_distance))[0]
+
+        return round(delta_solution, 5)
+    
