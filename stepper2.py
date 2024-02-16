@@ -2,7 +2,7 @@ import time
 import ctypes
 import numpy as np
 from math import sqrt
-import Jetson.GPIO as GPIO
+# import Jetson.GPIO as GPIO
 from scipy.optimize import fsolve
 
 class Stepper:
@@ -10,7 +10,7 @@ class Stepper:
     CW = 0
     libc = ctypes.CDLL("libc.so.6") # Load the C library
     MILLISECONDS_IN_SECOND = 1000    # number of milliseconds in one second
-    GPIO.setmode(GPIO.BOARD)
+    # GPIO.setmode(GPIO.BOARD)
 
     def __init__(self, pulsePin, dirPin, enablePin):
         self.pulsePin = pulsePin
@@ -28,7 +28,7 @@ class Stepper:
         self.minPulseWidth = 2.5 # the minimum pulse width in seconds (based on stepper driver)
         self.lastStepTime = 0 # the time the last step was done
 
-        self.setOutputPins() # set up pins --> direction, pulse, enable
+        # self.setOutputPins() # set up pins --> direction, pulse, enable
 
     """
     Set the target position and block until we get there.
@@ -52,23 +52,23 @@ class Stepper:
         delta_p = self.getChangeInPosition() # [ pulses ]
         
         # calculates the maximum velocity
-        v_max = delta_p / interpolation_time_in_ms              # [ pulses / ms ]
+        v_max = 1.5 * (delta_p / interpolation_time_in_ms)              # [ pulses / ms ]
         
         # time of each trapezoidal section in milliseconds.
         ta = tb = tc = interpolation_time_in_ms / 3                 # [ ms ]
-        a = Stepper.calculate_acceleration(v_max, delta_p)          # [ p / ms^2 ]
+        increment_time_resolution = 10 # [ ms ]
+
+        a = (v_max / ta)          # [ p / ms^2 ]
         decelerating_distance = v_max * (1.5*ta)             # distance to start stopping
-        
-        if decelerating_distance > delta_p / 2:
-            decelerating_distance = decelerating_distance / 2
         
         pulses = 0
         decelerating = False
 
-        start_time = self.getTime() # current time in milliseconds
-        acceleration_increment = 1
+        pulse_start_time = self.getTime() # current time in milliseconds for pulses
+        acceleration_start_time = pulse_start_time # current time in milliseconds for incrementing velocity by acceleration
 
-        v_t = a # a equals the acceleration at time 1
+        # we multiply acceleration increment time resolution since that is the velocity for the first 10 ms
+        v_t = a * increment_time_resolution
         
         # while we are not where we want to be
         while self.currentPos != absolute:
@@ -78,41 +78,42 @@ class Stepper:
             
             # while we havent reached our step interval, we wait
             # keep polling the time, once the current time - the start time >= our step interval we good
-            while self.getTime() - start_time >= self.stepInterval:
-                pass
-
-            # step interval has passed, so now we pulse
-            self.step()
-            # increment pulses travelled variable
-            pulses += 1
-            # accelerates
+            if self.getTime() - pulse_start_time >= self.stepInterval:
+                print(self.currentPos, v_t)
+                # step interval has passed, so now we pulse
+                self.step()
+                # increment pulses travelled variable
+                pulses += 1
+                # accelerates
+                pulse_start_time = self.getTime()
 
             # check if it is time to decelerate
-            if pulses == decelerating_distance:
+            if pulses >= decelerating_distance:
                 decelerating = True
 
             # if we are accelerating, we increment v_t for the next step interval
-            if not decelerating:
-                v_t += a*acceleration_increment
+            if not decelerating and self.getTime() - acceleration_start_time >= increment_time_resolution:
+                v_t += a*increment_time_resolution
+                acceleration_start_time = self.getTime()
                 if v_t > v_max:
                     v_t = v_max
             
-            if decelerating:
-                v_t -= a*acceleration_increment
+            if decelerating and self.getTime() - acceleration_start_time >= increment_time_resolution:
+                v_t -= a * increment_time_resolution
+                acceleration_start_time = self.getTime()
                 # velocity should only be an integer
                 # acceleration should also only be an integer (?) 
                 if v_t <= 0:
                     return
                 
-            start_time = int(time.time() * Stepper.MICROSECONDS_IN_SECOND)
+            pulse_start_time = self.getTime()
     
     def getChangeInPosition(self):
         return self.targetPos - self.currentPos
     
     def step(self):
-        print("stepping")
         GPIO.output(self.pulsePin, GPIO.HIGH)
-        Stepper.usleep(self._minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
+        Stepper.usleep(self.minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulsePin, GPIO.LOW)
 
     # returns time in microseconds since epoch 1970 
