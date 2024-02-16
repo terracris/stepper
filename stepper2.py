@@ -109,47 +109,38 @@ class Stepper:
                     v_t = 0.01
                 
     
-    def moveAbsolutePID(self, absolute):
-        # if we are not there set the target position
-        if self.currentPos != absolute:
-            self.targetPos = absolute
-        else:
-            return
+        def moveAbsolutePID(self, absolute):
+            # if we are not there set the target position
+            if self.currentPos != absolute:
+                self.targetPos = absolute
+            else:
+                return
         
-        Kp = 0.005
-        Ki = 0
-        Kd = 0.003
+            Kp = 0.005
+            Ki = 0
+            Kd = 0.003
 
-        error = self.getDistanceToTarget()
-        prev_error = 0
-        error_sum += error
-        max_velocity = 10
-        start_time = self.getTime()
-        max_integral = 10
-        error_der = error - prev_error
-        prev_error = error
+            error_sum = 0  # Initialize error_sum outside the loop
+            prev_error = 0  # Initialize prev_error outside the loop
+            max_velocity = 10
+            max_integral = 10
+            start_time = self.getTime()
 
+            while self.currentPos != absolute:
+                error = self.getDistanceToTarget()
+                error_sum += error
+                error_sum = min(max_integral, error_sum)  # constrain integral
+                error_der = error - prev_error
+                prev_error = error
 
-        while self.currentPos != absolute:
-            
-           
-            v_t =  Kp * error + Ki * error_sum + Kd * error_der # constrain maximum velocity
-            # v_t is velocity [pulses / ms] 
-            self.stepInterval = 1 / v_t  # [ms period between each pulse]
+                v_t = Kp * error + Ki * error_sum + Kd * error_der  # constrain maximum velocity
+                self.stepInterval = 1 / v_t  # [ms period between each pulse]
 
-            if self.getTime() - start_time >= self.stepInterval:
-                print(self.currentPos, v_t)
-                self.step()
-                self.currentPos += 1
-                start_time = self.getTime()
-            
-            error = self.getDistanceToTarget()
-            error_sum += error
-            error_sum = min(max_integral, error_sum) # constraining integral
-            error_der = error - prev_error  # 1600 - 0 = 1600 --> error becomes 1599 0 1600
-            prev_error = error  # 1600
-
-            
+                if self.getTime() - start_time >= self.stepInterval:
+                    print(self.currentPos, v_t)
+                    self.step()
+                    self.currentPos += 1
+                    start_time = self.getTime()
 
     
     def getDistanceToTarget(self):
