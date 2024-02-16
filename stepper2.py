@@ -2,7 +2,7 @@ import time
 import ctypes
 import numpy as np
 from math import sqrt
-# import Jetson.GPIO as GPIO
+import Jetson.GPIO as GPIO
 from scipy.optimize import fsolve
 
 class Stepper:
@@ -10,7 +10,7 @@ class Stepper:
     CW = 0
     libc = ctypes.CDLL("libc.so.6") # Load the C library
     MILLISECONDS_IN_SECOND = 1000    # number of milliseconds in one second
-    # GPIO.setmode(GPIO.BOARD)
+    GPIO.setmode(GPIO.BOARD)
 
     def __init__(self, pulsePin, dirPin, enablePin):
         self.pulsePin = pulsePin
@@ -28,7 +28,7 @@ class Stepper:
         self.minPulseWidth = 2.5 # the minimum pulse width in seconds (based on stepper driver)
         self.lastStepTime = 0 # the time the last step was done
 
-        # self.setOutputPins() # set up pins --> direction, pulse, enable
+        self.setOutputPins() # set up pins --> direction, pulse, enable
 
     """
     Set the target position and block until we get there.
@@ -59,7 +59,7 @@ class Stepper:
         increment_time_resolution = 10 # [ ms ]
 
         a = (v_max / ta)          # [ p / ms^2 ]
-        decelerating_distance = v_max * (1.5*ta)             # distance to start stopping
+        decelerating_distance = v_max * (1.675*ta)             # distance to start stopping
         
         pulses = 0
         decelerating = False
@@ -83,6 +83,7 @@ class Stepper:
                 # step interval has passed, so now we pulse
                 self.step()
                 # increment pulses travelled variable
+                self.currentPos += 1
                 pulses += 1
                 # accelerates
                 pulse_start_time = self.getTime()
@@ -104,9 +105,8 @@ class Stepper:
                 # velocity should only be an integer
                 # acceleration should also only be an integer (?) 
                 if v_t <= 0:
-                    return
+                    v_t = 0.01
                 
-            pulse_start_time = self.getTime()
     
     def getChangeInPosition(self):
         return self.targetPos - self.currentPos
@@ -151,4 +151,7 @@ class Stepper:
         delta_solution = fsolve(equation, initial_guess, args=(velocity, total_distance))[0]
 
         return round(delta_solution, 5)
-    
+   
+if __name__ == '__main__':
+    motor = Stepper(11,13,15)
+    motor.moveAbsolute(1600, 1)
