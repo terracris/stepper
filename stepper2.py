@@ -108,7 +108,40 @@ class Stepper:
                     v_t = 0.01
                 
     
-    def getChangeInPosition(self):
+    def moveAbsolutePID(self, absolute):
+        # if we are not there set the target position
+        if self.currentPos != absolute:
+            self.targetPos = absolute
+        else:
+            return
+        
+        Kp = 0.5
+        Ki = 0
+
+        error = self.getDistanceToTarget() # gets the distance to the target value
+        error_sum = 0
+        start_time = self.getTime()
+
+
+        while self.currentPos != absolute:
+            
+            v_t = Kp * error + Ki * error_sum
+            # PID is definitely the right choice here 
+            self.stepInterval = 1 / v_t
+
+            if self.getTime - start_time >= self.stepInterval:
+                print(self.currentPos, v_t)
+                self.step()
+                self.currentPos += 1
+                start_time = self.getTime()
+            
+            error_sum += error
+            error = self.getDistanceToTarget()
+            
+            
+
+    
+    def getDistanceToTarget(self):
         return self.targetPos - self.currentPos
     
     def step(self):
@@ -154,4 +187,4 @@ class Stepper:
    
 if __name__ == '__main__':
     motor = Stepper(11,13,15)
-    motor.moveAbsolute(1600, 1)
+    motor.moveAbsolutePID(1600)
