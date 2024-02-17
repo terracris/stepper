@@ -16,7 +16,7 @@ class Stepper:
     """
     Each motor can have a defined positive direction for rotation
     """
-    def __init__(self, pulsePin, dirPin, enablePin, stepAngle, gearRatio, positiveDirection, maxJointCCW, maxJointCW):
+    def __init__(self, pulsePin, dirPin, enablePin, stepsPerRev, gearRatio, positiveDirection, maxJointCCW, maxJointCW):
         self.pulsePin = pulsePin
         self.dirPin = dirPin
         self.enablePin = enablePin
@@ -38,16 +38,45 @@ class Stepper:
         self.currentAngle = 0
         # gear ratio
         self.gear_ratio = gearRatio
-        self.step_angle = stepAngle
+        self.steps_per_rev = stepsPerRev
+        self.step_angle = stepsPerRev / 360
         self.maxJointLimitCCW = maxJointCCW
         self.maxJointLimitCW = maxJointCW
         self.setOutputPins() # set up pins --> direction, pulse, enable
 
    
+    # write angles
     def write(self, angle):
+        # check if the angle is within the limits for the joint
+        # if it is, calculate the angles number of steps to get there
+        
+        if not self.inLimits(angle):
+            return
+        
+        # number of steps to go to from our current position
         steps = self.calculateSteps(angle)
-        self.moveAbsolute(self.currentPos + steps)
+        self.moveAbsolutePID(self.currentPos + steps)
+        # technically, because I round the value, there is an error in my actual angle
+        # actually, I should account for this error because it will build up immensely
+        # TODO correct for the error
+        self.currentAngle = self.updateAngle()
 
+    
+    def inLimits(self, angle):
+        return angle >= self.maxJointLimitCW and angle <= self.maxJointLimitCCW
+    
+    """
+    converts pulse position to angle in degrees.
+    """
+    def updateAngle(self):
+        return (self.currentPos * self.step_angle) / self.gear_ratio
+
+    
+    """
+    Converts desired angle to steps to control the stepper motor.
+    angle: angle from -jointLimitCW to JointLimitCCW
+    Changes the direction of rotation 
+    """
     def calculateSteps(self, angle):
         current_angle = self.currentAngle
         change_in_angle = angle - current_angle
@@ -58,9 +87,9 @@ class Stepper:
             change_in_angle = abs(change_in_angle)
         else:
             self.direction = self.positiveDirection
-
-
-        goal_steps = (change_in_angle * self.gear_ratio) / self.step_angle
+        
+        # rounds the number of steps required and then turns it into an int (just in case)
+        goal_steps = int(round(change_in_angle * self.gear_ratio) / self.step_angle)
 
         return goal_steps
 
@@ -95,7 +124,6 @@ class Stepper:
             if self.getTime() - start_time >= self.stepInterval:
                 print(self.currentPos, v_t)
                 self.step()
-                self.currentPos += 1
                 start_time = self.getTime()
 
     
@@ -103,9 +131,23 @@ class Stepper:
         return self.targetPos - self.currentPos
     
     def step(self):
+        self.setDirectionPins()
         GPIO.output(self.pulsePin, GPIO.HIGH)
         Stepper.usleep(self.minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulsePin, GPIO.LOW)
+        self.updatePosition()
+
+    def updatePosition(self):
+        if self.direction == self.positiveDirection:
+            self.currentAngle += 1
+        else:
+            self.currentPos -= 1
+    
+    def setDirectionPins(self):
+        if self.direction == Stepper.CCW:
+            GPIO.output(self.dirPin, GPIO.HIGH) # When direction pin is HIGH, the motor will spin CCW
+        else:
+            GPIO.output(self.dirPin, GPIO.LOW) # when direction pin is LOW, the motor will spin CW
 
     # returns time in microseconds since epoch 1970 
     def getTime(self):
@@ -126,23 +168,7 @@ class Stepper:
         Sleep for the given number of microseconds.
         """ 
         Stepper.libc.usleep(int(microseconds))
-
-    @staticmethod
-    def calculate_acceleration(velocity, total_distance):
-
-        def equation(delta, v_max, distance):
-            # euler mascheroni constant
-            euler_mascheroni_constant = 0.577
-            return euler_mascheroni_constant * delta - v_max * np.exp(-distance * delta)
-        
-        # initial guess for delta
-        initial_guess = 0.001
-
-        # solve the equation
-        delta_solution = fsolve(equation, initial_guess, args=(velocity, total_distance))[0]
-
-        return round(delta_solution, 5)
    
 if __name__ == '__main__':
-    motor = Stepper(11,13,15)
-    motor.moveAbsolutePID(1600)
+    motor = Stepper(11,13,15, 200, 1, 0, 210, -10)
+    motor.moveAbsolutePID(50)
