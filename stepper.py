@@ -39,7 +39,7 @@ class Stepper:
         # gear ratio
         self.gear_ratio = gearRatio
         self.steps_per_rev = stepsPerRev
-        self.step_angle = stepsPerRev / 360
+        self.step_angle = 360 / stepsPerRev
         self.maxJointLimitCCW = maxJointCCW
         self.maxJointLimitCW = maxJointCW
         self.setOutputPins() # set up pins --> direction, pulse, enable
@@ -51,6 +51,7 @@ class Stepper:
         # if it is, calculate the angles number of steps to get there
         
         if not self.inLimits(angle):
+            print("angle out of limit")
             return
         
         # number of steps to go to from our current position
@@ -83,13 +84,13 @@ class Stepper:
 
         # if the change in angle is negative, we move in that motor's negative direction
         if change_in_angle < 0:
+            print("negative direction", self.negativeDirection)
             self.direction = self.negativeDirection
-            change_in_angle = abs(change_in_angle)
         else:
             self.direction = self.positiveDirection
         
         # rounds the number of steps required and then turns it into an int (just in case)
-        goal_steps = int(round(change_in_angle * self.gear_ratio) / self.step_angle)
+        goal_steps = int(round(change_in_angle * self.gear_ratio / self.step_angle))
 
         return goal_steps
 
@@ -118,11 +119,11 @@ class Stepper:
             error_der = error - prev_error
             prev_error = error
 
-            v_t = Kp * error + Ki * error_sum + Kd * error_der  # constrain maximum velocity
+            v_t = abs(Kp * error + Ki * error_sum + Kd * error_der)  # constrain maximum velocity
             self.stepInterval = 1 / v_t  # [ms period between each pulse]
 
             if self.getTime() - start_time >= self.stepInterval:
-                print(self.currentPos, v_t)
+                print(self.currentPos, v_t, self.direction)
                 self.step()
                 start_time = self.getTime()
 
@@ -139,12 +140,13 @@ class Stepper:
 
     def updatePosition(self):
         if self.direction == self.positiveDirection:
-            self.currentAngle += 1
+            self.currentPos += 1
         else:
             self.currentPos -= 1
     
     def setDirectionPins(self):
         if self.direction == Stepper.CCW:
+            print("ccw")
             GPIO.output(self.dirPin, GPIO.HIGH) # When direction pin is HIGH, the motor will spin CCW
         else:
             GPIO.output(self.dirPin, GPIO.LOW) # when direction pin is LOW, the motor will spin CW
@@ -170,5 +172,7 @@ class Stepper:
         Stepper.libc.usleep(int(microseconds))
    
 if __name__ == '__main__':
-    motor = Stepper(11,13,15, 200, 1, 0, 210, -10)
-    motor.moveAbsolutePID(50)
+    motor = Stepper(11,15,13, 200, 1, 0, 210, -10)
+    motor.write(-10)
+    while True:
+        GPIO.output(11, GPIO.HIGH)
