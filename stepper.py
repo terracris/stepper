@@ -173,6 +173,4 @@ class Stepper:
    
 if __name__ == '__main__':
     motor = Stepper(11,15,13, 200, 1, 0, 210, -10)
-    motor.write(-10)
-    while True:
-        GPIO.output(11, GPIO.HIGH)
+    motor.write(90)
