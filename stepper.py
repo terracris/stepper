@@ -4,7 +4,6 @@ import numpy as np
 from math import sqrt
 import Jetson.GPIO as GPIO
 from collections import deque
-from scipy.optimize import fsolve
 
 class Stepper:
     CCW = 1
@@ -42,6 +41,7 @@ class Stepper:
         self.step_angle = 360 / stepsPerRev
         self.maxJointLimitCCW = maxJointCCW
         self.maxJointLimitCW = maxJointCW
+        print("here")
         self.setOutputPins() # set up pins --> direction, pulse, enable
 
    
@@ -103,10 +103,8 @@ class Stepper:
             return
         
         Kp = 0.005
-        Ki = 0
         Kd = 0.003
 
-        error_sum = 0  # Initialize error_sum outside the loop
         prev_error = 0  # Initialize prev_error outside the loop
         max_velocity = 10
         max_integral = 10
@@ -114,12 +112,10 @@ class Stepper:
 
         while self.currentPos != absolute:
             error = self.getDistanceToTarget()
-            error_sum += error
-            error_sum = min(max_integral, error_sum)  # constrain integral
             error_der = error - prev_error
             prev_error = error
 
-            v_t = abs(Kp * error + Ki * error_sum + Kd * error_der)  # constrain maximum velocity
+            v_t = abs(Kp * error + Kd * error_der)  # constrain maximum velocity
             self.stepInterval = 1 / v_t  # [ms period between each pulse]
 
             if self.getTime() - start_time >= self.stepInterval:
@@ -174,3 +170,4 @@ class Stepper:
 if __name__ == '__main__':
     motor = Stepper(11,15,13, 200, 1, 0, 210, -10)
     motor.write(90)
+    print("hello")
