@@ -15,7 +15,7 @@ class Stepper:
     """
     Each motor can have a defined positive direction for rotation
     """
-    def __init__(self, pulsePin, dirPin, enablePin, homingPin,stepsPerRev, gearRatio, positiveDirection, maxJointCCW, maxJointCW):
+    def __init__(self, pulsePin, dirPin, enablePin, homingPin,stepsPerRev, gearRatio, positiveDirection, maxJointCCW, maxJointCW, homeCount):
         self.pulsePin = pulsePin
         self.dirPin = dirPin
         self.enablePin = enablePin
@@ -44,6 +44,7 @@ class Stepper:
         self.maxJointLimitCW = maxJointCW
         self.setOutputPins() # set up pins --> direction, pulse, enable
         self.hasHomed = False
+        self.home_count = homeCount
         self.home()
 
    
@@ -124,7 +125,7 @@ class Stepper:
             # if v_t - prev_v_t >= max_acceleration:
                #  v_t = v_t / 2
 
-            v_t = min(0.30, v_t)
+            v_t =  v_t
             
             self.stepInterval = 1 / v_t  # [ms period between each pulse]
 
@@ -194,7 +195,7 @@ class Stepper:
         # to minimize the error, we should increase the pulse number
         self.hasHomed = True
         time.sleep(1)
-        homeCount = 340
+        homeCount = self.home_count
         self.direction = self.positiveDirection
         self.moveAbsolutePID(homeCount)
 
@@ -207,14 +208,24 @@ class Stepper:
         Stepper.libc.usleep(int(microseconds))
    
 if __name__ == '__main__':
-    pulsePin = 11
-    directionPin = 15
-    homingPin = 13
+   #  pulsePin = 11
+   # directionPin = 15
+   # homingPin = 13
     pulsesPerRev = 200
-    gearRatio = 4
-    positiveDirection = 0 #CW
+    # gearRatio = 4
+    #positiveDirection = 0 #CW
+    #home_count = 340
 
-    motor = Stepper(pulsePin,directionPin,12,homingPin, pulsesPerRev, gearRatio, positiveDirection, 210, -10)
+    #motor = Stepper(pulsePin,directionPin,12,homingPin, pulsesPerRev, gearRatio, positiveDirection, 210, -10, home_count)
+
+    pulsePin_1 = 31
+    dir_pin_1 = 37
+    homingPin_1 = 33
+    positiveDirection_1 = 0 # CCW
+    gear_ratio_1 = 5
+    home_count_1 = 1000
+
+    motor1 = Stepper(pulsePin_1, dir_pin_1, 12, homingPin_1, pulsesPerRev, gear_ratio_1, positiveDirection_1, 210, -10, home_count_1)
     
     # motor.write(90)
     print("hello")
