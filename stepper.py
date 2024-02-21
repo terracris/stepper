@@ -15,10 +15,11 @@ class Stepper:
     """
     Each motor can have a defined positive direction for rotation
     """
-    def __init__(self, pulsePin, dirPin, enablePin, stepsPerRev, gearRatio, positiveDirection, maxJointCCW, maxJointCW):
+    def __init__(self, pulsePin, dirPin, enablePin, homingPin,stepsPerRev, gearRatio, positiveDirection, maxJointCCW, maxJointCW):
         self.pulsePin = pulsePin
         self.dirPin = dirPin
         self.enablePin = enablePin
+        self.homingPin = homingPin
         self.direction = Stepper.CCW if (positiveDirection == 1) else Stepper.CW # current direction motor is spinning ini
         self.positiveDirection = Stepper.CCW if (positiveDirection == 1) else Stepper.CW
         self.negativeDirection = Stepper.CW if (positiveDirection == 1) else Stepper.CCW
@@ -41,8 +42,9 @@ class Stepper:
         self.step_angle = 360 / stepsPerRev
         self.maxJointLimitCCW = maxJointCCW
         self.maxJointLimitCW = maxJointCW
-        print("here")
         self.setOutputPins() # set up pins --> direction, pulse, enable
+        self.hasHomed = False
+        self.home()
 
    
     # write angles
@@ -102,26 +104,38 @@ class Stepper:
         else:
             return
         
-        Kp = 0.005
-        Kd = 0.003
+        Kp = 0.0050
+        Kd = -0.003
 
         prev_error = 0  # Initialize prev_error outside the loop
         max_velocity = 10
         max_integral = 10
         start_time = self.getTime()
+        max_acceleration = 0.20 # max pulses per ms per ms
+        prev_v_t = 0
 
         while self.currentPos != absolute:
             error = self.getDistanceToTarget()
             error_der = error - prev_error
-            prev_error = error
+            # print("error derivative: ", error_der) 
 
             v_t = abs(Kp * error + Kd * error_der)  # constrain maximum velocity
+            
+            # if v_t - prev_v_t >= max_acceleration:
+               #  v_t = v_t / 2
+
+            v_t = min(0.30, v_t)
+            
             self.stepInterval = 1 / v_t  # [ms period between each pulse]
 
             if self.getTime() - start_time >= self.stepInterval:
                 print(self.currentPos, v_t, self.direction)
                 self.step()
                 start_time = self.getTime()
+                prev_error = error
+                prev_v_t = v_t
+
+
 
     
     def getDistanceToTarget(self):
@@ -132,7 +146,8 @@ class Stepper:
         GPIO.output(self.pulsePin, GPIO.HIGH)
         Stepper.usleep(self.minPulseWidth) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulsePin, GPIO.LOW)
-        self.updatePosition()
+        if self.hasHomed:
+            self.updatePosition()
 
     def updatePosition(self):
         if self.direction == self.positiveDirection:
@@ -155,11 +170,35 @@ class Stepper:
         GPIO.setup(self.pulsePin, GPIO.OUT)   # output pin 
         GPIO.setup(self.dirPin, GPIO.OUT)     # output pin
         GPIO.setup(self.enablePin, GPIO.OUT)  # output pin
-
+        GPIO.setup(self.homingPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # input pin 
+        
         GPIO.output(self.enablePin, GPIO.LOW) # turn motors on
         GPIO.output(self.dirPin, GPIO.HIGH)    # HIGH is ccw
         GPIO.output(self.pulsePin, GPIO.LOW)  # no pulse 
 
+    def home(self):
+        
+        isHome = GPIO.input(self.homingPin)  # reads from homing pin to determine if we are home yet
+
+        while not isHome:
+            # if we are not home, we must rotate in our negative direction
+            # until the limit switch has been hit
+            print("homing")
+            self.direction = self.negativeDirection
+            self.step()
+            isHome = GPIO.input(self.homingPin)
+            time.sleep(0.01)
+
+        # once we have hit the limit switch, we must go to our home configuration step count
+        # unfortunately, I believe this will have to be calculated experimentally. 
+        # to minimize the error, we should increase the pulse number
+        self.hasHomed = True
+        time.sleep(1)
+        homeCount = 340
+        self.direction = self.positiveDirection
+        self.moveAbsolutePID(homeCount)
+
+    
     @staticmethod
     def usleep(microseconds):
         """
@@ -168,6 +207,14 @@ class Stepper:
         Stepper.libc.usleep(int(microseconds))
    
 if __name__ == '__main__':
-    motor = Stepper(11,15,13, 200, 1, 0, 210, -10)
-    motor.write(90)
+    pulsePin = 11
+    directionPin = 15
+    homingPin = 13
+    pulsesPerRev = 200
+    gearRatio = 4
+    positiveDirection = 0 #CW
+
+    motor = Stepper(pulsePin,directionPin,12,homingPin, pulsesPerRev, gearRatio, positiveDirection, 210, -10)
+    
+    # motor.write(90)
     print("hello")
