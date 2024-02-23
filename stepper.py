@@ -13,29 +13,26 @@ class Stepper:
     GPIO.setmode(GPIO.BOARD)
 
     """
-    Each motor can have a defined positive direction for rotation
+    All motors use CCW as positive direction for rotation.
+    max_speed comes in as pulses per second.
     """
-    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, positive_direction, max_joint_ccw, max_joint_cw, home_count):
+    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count):
         self.pulse_pin = pulse_pin
         self.dir_pin = dir_pin
         self.enable_pin = enable_pin
         self.homing_pin = homing_pin
-        self.direction = Stepper.CCW if (positive_direction == 1) else Stepper.CW # current direction motor is spinning ini
-        self.positive_direction = Stepper.CCW if (positive_direction == 1) else Stepper.CW
-        self.negative_direction = Stepper.CW if (positive_direction == 1) else Stepper.CCW
-
+        self.direction = Stepper.CCW # current direction motor is spinning
 
         self.current_pos = 0
         self.target_pos = 0
+        self.current_angle = 0
+
         # The current motor speed in steps per second --> Positive means counter-clockwise
         self.speed = 0
-        self.max_speed = 0.0 # default to zero until set
+        self.max_speed = max_speed / Stepper.MILLISECONDS_IN_SECOND # our code operates in pulses per millisecond for increased accuracy
         self.acceleration = 0.0 # default to zero until set
-        self.step_interval = 0 # the current interval between steps in microseconds (defines the angular velocity (RPM) and acceleration)
         self.min_pulse_width = 2.5 # the minimum pulse width in seconds (based on stepper driver)
-        self.last_step_time = 0 # the time the last step was done
 
-        self.current_angle = 0
         # gear ratio
         self.gear_ratio = gear_ratio
         self.steps_per_rev = steps_per_rev
@@ -49,6 +46,7 @@ class Stepper:
 
    
     # write angles
+    # sets the direction
     def write(self, angle):
         # check if the angle is within the limits for the joint
         # if it is, calculate the angles number of steps to get there
@@ -57,12 +55,18 @@ class Stepper:
             print("angle out of limit")
             return
         
-        # number of steps to go to from our current position
-        steps = self.calculate_steps(angle)
-        self.move_absolute_pid(self.current_pos + steps)
-        # technically, because I round the value, there is an error in my actual angle
-        # actually, I should account for this error because it will build up immensely
-        # TODO correct for the error
+        # absolute step position for arm
+        absolute_steps = self.calculate_steps(angle)
+        
+        if absolute_steps > 0:
+            self.direction = Stepper.CCW # again positive steps are CCW
+        else:
+            self.direction = Stepper.CW
+        
+        self.move_absolute_pid(absolute_steps)
+        
+        # calculates our angle based on our current position
+        # this accounts for angle errors
         self.current_angle = self.update_angle()
 
     
@@ -75,25 +79,17 @@ class Stepper:
     def update_angle(self):
         return (self.current_pos * self.step_angle) / self.gear_ratio
 
-    
     """
     Converts desired angle to steps to control the stepper motor.
     angle: angle from -jointLimitCW to JointLimitCCW
-    Changes the direction of rotation 
+
+    negative goal steps indicates move CW. positive goal steps are CCW
     """
     def calculate_steps(self, angle):
         current_angle = self.current_angle
-        change_in_angle = angle - current_angle
-
-        # if the change in angle is negative, we move in that motor's negative direction
-        if change_in_angle < 0:
-            print("negative direction", self.negative_direction)
-            self.direction = self.negative_direction
-        else:
-            self.direction = self.positive_direction
         
         # rounds the number of steps required and then turns it into an int (just in case)
-        goal_steps = int(round(change_in_angle * self.gear_ratio / self.step_angle))
+        goal_steps = int(round(current_angle * self.gear_ratio / self.step_angle))
 
         return goal_steps
 
@@ -105,12 +101,10 @@ class Stepper:
         else:
             return
         
-        Kp = 0.0050
-        Kd = -0.003
+        Kp = 0.005
+        Kd = 0.003
 
         prev_error = 0  # Initialize prev_error outside the loop
-        max_velocity = 10
-        max_integral = 10
         start_time = self.get_time()
         max_acceleration = 0.20 # max pulses per ms per ms
         prev_v_t = 0
@@ -121,13 +115,9 @@ class Stepper:
             # print("error derivative: ", error_der) 
 
             v_t = abs(Kp * error + Kd * error_der)  # constrain maximum velocity
+            v_t =  min(self.max_speed, v_t)
             
-            # if v_t - prev_v_t >= max_acceleration:
-               #  v_t = v_t / 2
-
-            v_t =  v_t
-            
-            self.step_interval = 1 / v_t  # [ms period between each pulse]
+            self.step_interval = 1 / v_t  # [ ms period between each pulse ]
 
             if self.get_time() - start_time >= self.step_interval:
                 print(self.current_pos, v_t, self.direction)
@@ -146,11 +136,12 @@ class Stepper:
         GPIO.output(self.pulse_pin, GPIO.HIGH)
         Stepper.usleep(self.min_pulse_width) # TODO need to set minimum pulse width as 2.5 microseconds
         GPIO.output(self.pulse_pin, GPIO.LOW)
+        
         if self.has_homed:
             self.update_position()
 
     def update_position(self):
-        if self.direction == self.positive_direction:
+        if self.direction == Stepper.CCW:
             self.current_pos += 1
         else:
             self.current_pos -= 1
@@ -174,7 +165,7 @@ class Stepper:
         GPIO.setup(self.homing_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # input pin 
         
         GPIO.output(self.enable_pin, GPIO.LOW) # turn motors on
-        GPIO.output(self.dir_pin, GPIO.HIGH)    # HIGH is ccw
+        GPIO.output(self.dir_pin, GPIO.HIGH)    # HIGH is ccw --> default direction
         GPIO.output(self.pulse_pin, GPIO.LOW)  # no pulse 
     
     
@@ -186,7 +177,7 @@ class Stepper:
             # if we are not home, we must rotate in our negative direction
             # until the limit switch has been hit
             print("homing")
-            self.direction = self.negative_direction
+            self.direction = Stepper.CCW  # all motors home in the CCW direction
             self.step()
             is_home = GPIO.input(self.homing_pin)
             time.sleep(0.01)
@@ -195,10 +186,19 @@ class Stepper:
         # unfortunately, I believe this will have to be calculated experimentally. 
         # to minimize the error, we should increase the pulse number
         self.has_homed = True
-        time.sleep(1)
-        home_count = self.home_count
-        self.direction = self.positive_direction
-        self.move_absolute_pid(home_count)
+        time.sleep(1) # wait to slow down completely
+        home_count = self.home_count # count to home position
+        self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
+        self.move_absolute_pid(home_count) # move there
+        
+        # after all homing is complete, we need to reset our position
+        self.reset_position()
+
+    def reset_position(self):
+        self.current_pos = 0
+        self.target_pos = 0
+        self.current_angle = 0
+
 
     
     @staticmethod
@@ -224,6 +224,9 @@ if __name__ == '__main__':
     homing_pin_1 = 33
     positive_direction_1 = 0 # CCW
     gear_ratio_1 = 5
-    home_count_1 = 1000
+    home_count_1 = -1000
+    max_speed = 10
+    max_ccw_1 = 10
+    max_cw_1 = -135
 
-    motor1 = Stepper(pulse_pin_1, dir_pin_1, 12, homing_pin_1, pulses_per_rev, gear_ratio_1, positive_direction_1, 210, -10, home_count_1)
+    motor1 = Stepper(pulse_pin_1, dir_pin_1, 12, homing_pin_1, pulses_per_rev, gear_ratio_1, max_speed, max_ccw_1, max_cw_1, home_count_1)
