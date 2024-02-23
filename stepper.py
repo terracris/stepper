@@ -16,7 +16,7 @@ class Stepper:
     All motors use CCW as positive direction for rotation.
     max_speed comes in as pulses per second.
     """
-    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count):
+    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count, kp=0.005, kd=0.003):
         self.pulse_pin = pulse_pin
         self.dir_pin = dir_pin
         self.enable_pin = enable_pin
@@ -32,6 +32,8 @@ class Stepper:
         self.max_speed = max_speed / Stepper.MILLISECONDS_IN_SECOND # our code operates in pulses per millisecond for increased accuracy
         self.acceleration = 0.0 # default to zero until set
         self.min_pulse_width = 2.5 # the minimum pulse width in seconds (based on stepper driver)
+        self.kp = kp
+        self.kd = kd
 
         # gear ratio
         self.gear_ratio = gear_ratio
@@ -101,8 +103,8 @@ class Stepper:
         else:
             return
         
-        Kp = 0.005
-        Kd = 0.003
+        Kp = self.kp
+        Kd = self.kd
 
         prev_error = 0  # Initialize prev_error outside the loop
         start_time = self.get_time()
@@ -199,6 +201,8 @@ class Stepper:
         self.target_pos = 0
         self.current_angle = 0
 
+    def get_angle(self):
+        return self.current_angle
 
     
     @staticmethod
@@ -207,26 +211,5 @@ class Stepper:
         Sleep for the given number of microseconds.
         """ 
         Stepper.libc.usleep(int(microseconds))
+
    
-if __name__ == '__main__':
-   #  pulse_pin = 11
-   # direction_pin = 15
-   # homing_pin = 13
-    pulses_per_rev = 200
-    # gear_ratio = 4
-    #positive_direction = 0 #CW
-    #home_count = 340
-
-    #motor = Stepper(pulse_pin,direction_pin,12,homing_pin, pulses_per_rev, gear_ratio, positive_direction, 210, -10, home_count)
-
-    pulse_pin_1 = 31
-    dir_pin_1 = 37
-    homing_pin_1 = 33
-    positive_direction_1 = 0 # CCW
-    gear_ratio_1 = 5
-    home_count_1 = -1000
-    max_speed = 10
-    max_ccw_1 = 10
-    max_cw_1 = -135
-
-    motor1 = Stepper(pulse_pin_1, dir_pin_1, 12, homing_pin_1, pulses_per_rev, gear_ratio_1, max_speed, max_ccw_1, max_cw_1, home_count_1)
