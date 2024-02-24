@@ -1,21 +1,37 @@
 import threading
+import numpy as np
+from math import radians
+import modern_robotics as mr
 from stepper import Stepper
 
 class Arm:
-
     # I am going to make the arm take in 4 different motors on startup
     def __init__(self, j1, j2, j3, j4):
-        
-        self.j1 = j1
-        self.j2 = j2
-        self.j3 = j3
-        self.j4 = j4
+                
         self.joints = [j1, j2, j3, j4]
-        self.j1_angle = 0
-        self.j2_angle = 0
-        self.j3_angle = 0
-        self.j4_angle = 0
-        self.threads = [] # empty list for threads for homing
+        self.joint_angles = [0, 0, 0, 0]
+
+        # all lengths are [ m ]
+        # all angles are [ rad ] 
+        # home configuration of robot end effector (concepts covered in RBE 501)
+        self.M = np.array([[ 1, 0, 0, 0.55912576],
+                           [ 0, 1, 0, 0.0181],
+                           [ 0, 0, 1, 0.598742],
+                           [ 0, 0, 0, 1]])
+        
+        # screw axis (twist list)
+        self.twist_list = np.array([[0, 0, 1,     0,        0,       0],
+                                    [0, 1, 0,   0.198,      0,     -0.07],
+                                    [0, 1, 0, 0.568642,     0,     -0.07],
+                                    [1, 0, 0,     0,    0.598742, -0.0181]]).T
+
+        
+        self.theta_list_guess = np.array([np.pi / 2.0, np.pi / 4.0, np.pi / 4.0, np.pi / 2.0])
+        
+        # EE orientation error tol
+        self.eomg = 0.01 
+        # EE position error tol --> Tolerance is 1mm
+        self.ev = 0.001
 
         self.home()
 
@@ -23,20 +39,96 @@ class Arm:
     def home(self):
         # joint is the actual stepper motor class
 
+        threads = []
+
         for joint in self.joints:
             thread = threading.Thread(target=self.home_joint, args=(joint))
             thread.start()
-            self.threads.append(thread)
+            threads.append(thread)
 
         # wait for each joint to home
-        for thread in self.threads:
+        for thread in threads:
             thread.join()
+            threads.remove(thread) # remove thread after completion
+        
         print("All threads finished")
 
     # blocking function to home each joint
     def home_joint(self, joint):
         joint.home()
 
+    # theta_list is list of joint angles 
+    def fk(self, theta_list):
+        fk = mr.FKinSpace(self.M, self.twist_list,theta_list)
+        return fk
+    
+    def ik(self, desired_ee):
+        ik, _ = mr.IKinSpace(self.twist_list, self.M, desired_ee, self.theta_list_guess, self.eomg, self.ev)
+        return ik
+    
+    def traj_planning(self, ik):
+        
+        tf = 5     # time of motion [ s ]
+        N = 5      # number of points in trajectory
+        method = 5 # time-scaling method (quintic)
+        theta_start = self.get_current_theta()
+        joint_traj = mr.JointTrajectory(theta_start, ik, tf, N, method)
+        return joint_traj
+    
+    def follow_trajectory(self, trajecory):
+        start_time = Stepper.get_time()  # time resolution will be in seconds
+        # trajectory is a numpy array size (N x J)
+        # N: Number of points in the trajectory
+        # J: Number of joints in the robot arm
+        num_trajecory_points = trajecory.shape[0]
+
+        # ALWAYS SKIP THE FIRST TRAJECTORY --> you are already there.
+
+        for point in range(1, num_trajecory_points + 1):
+            joint_pose = trajecory[point]
+            self.write_joints(joint_pose)
+
+    def write_joints(self, joint_pose):
+        zipped = zip(self.joints, joint_pose)
+        threads = []
+        updated_angle = []
+        
+        for joint, joint_angle in zipped:
+            thread = threading.Thread(target=self.write_joint, args=(joint, joint_angle))
+            thread.start()
+            threads.append()
+
+        # wait for each joint to reach its position
+        for thread in threads:
+            updated_joint_angle = thread.join()
+            updated_angle.append(updated_joint_angle)
+            threads.remove(thread) # remove thread after completion
+        
+        self.update_angles(updated_angle)
+        print("All threads finished")      
+
+    def write_joint(self, joint, joint_angle):
+        # TODO make write in stepper library return the actual angle of the joint
+        # because of our step angle resolution there is error --> this will help account for the error in pose
+        return joint.write(joint_angle) # writes angle to joint --> needs to be threading though
+
+    def update_angles(self, joint_angles):
+        
+        # updates our joint angles to the ones actually achieved by the motors
+        for x in range(len(joint_angles)):
+            self.joint_angles[x] = joint_angles[x]
+
+    
+    def get_current_theta(self):
+
+        # returns our current joint angles in radians
+        theta_list = []
+
+        for theta in self.joint_angles:
+            theta_list.append(radians(theta))
+        
+        return theta_list
+            
 
 if __name__ == '__main__':
     
@@ -59,6 +151,8 @@ if __name__ == '__main__':
     gear_ratio_j2 = 5
     home_count_j2 = -1000
     max_speed_j2 = 10
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j2 = 10
     max_cw_j2 = -135
 

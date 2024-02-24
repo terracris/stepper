@@ -107,7 +107,7 @@ class Stepper:
         Kd = self.kd
 
         prev_error = 0  # Initialize prev_error outside the loop
-        start_time = self.get_time()
+        start_time = Stepper.get_time()
         max_acceleration = 0.20 # max pulses per ms per ms
         prev_v_t = 0
 
@@ -121,10 +121,10 @@ class Stepper:
             
             self.step_interval = 1 / v_t  # [ ms period between each pulse ]
 
-            if self.get_time() - start_time >= self.step_interval:
+            if Stepper.get_time() - start_time >= self.step_interval:
                 print(self.current_pos, v_t, self.direction)
                 self.step()
-                start_time = self.get_time()
+                start_time = Stepper.get_time()
                 prev_error = error
                 prev_v_t = v_t
 
@@ -155,8 +155,9 @@ class Stepper:
         else:
             GPIO.output(self.dir_pin, GPIO.LOW) # when direction pin is LOW, the motor will spin CW
 
-   # returns time in microseconds since epoch 1970 
-    def get_time(self):
+   # returns time in microseconds since epoch 1970
+    @staticmethod 
+    def get_time():
         return int(time.time() * Stepper.MILLISECONDS_IN_SECOND)
    
     def set_output_pins(self):
