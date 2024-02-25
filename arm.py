@@ -157,8 +157,30 @@ if __name__ == '__main__':
     max_cw_j2 = -135
 
     # joint 3
-
+    pulse_pin_j3 = 36
+    dir_pin_j3 = 22
+    homing_pin_j3 = 40
+    gear_ratio_j3 = 5  # TODO review gear ratio
+    home_count_j3 = -1000  # TODO calculate home count
+    max_speed_j3 = 10
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
+    max_ccw_j3 = 10  # TODO calculate joint limit
+    max_cw_j3 = -135  # TODO calculate joint limit
+ 
     # joint 4
-
-    j1 =j2 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
+    pulse_pin_j4 = 16
+    dir_pin_j4 = 18
+    homing_pin_j4 = 38
+    gear_ratio_j4 = 5 # TODO calculate gear ratio
+    home_count_j4 = -1000 # TODO calculate home count
+    max_speed_j4 = 10
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
+    max_ccw_j4 = 10 # TODO calculate joint limits
+    max_cw_j4 = -135 # TODO calcylate joint limit
+ 
+    j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
     j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
+    j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3)
+    j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4)
