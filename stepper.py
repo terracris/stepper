@@ -44,7 +44,7 @@ class Stepper:
         self.set_output_pins() # set up pins --> direction, pulse, enable
         self.has_homed = False
         self.home_count = home_count
-        self.home()
+        # self.home()
 
    
     # write angles
@@ -88,10 +88,9 @@ class Stepper:
     negative goal steps indicates move CW. positive goal steps are CCW
     """
     def calculate_steps(self, angle):
-        current_angle = self.current_angle
         
         # rounds the number of steps required and then turns it into an int (just in case)
-        goal_steps = int(round(current_angle * self.gear_ratio / self.step_angle))
+        goal_steps = int(round(angle * self.gear_ratio / self.step_angle))
 
         return goal_steps
 
@@ -176,23 +175,33 @@ class Stepper:
         
         is_home = GPIO.input(self.homing_pin)  # reads from homing pin to determine if we are home yet
 
+        
+        self.direction = Stepper.CCW  # all motors home in the CCW direction
         while not is_home:
             # if we are not home, we must rotate in our negative direction
             # until the limit switch has been hit
-            print("homing")
-            self.direction = Stepper.CCW  # all motors home in the CCW direction
-            self.step()
+            
             is_home = GPIO.input(self.homing_pin)
+            
+            if is_home:
+                break
+            
+            print("homing direction is: ", self.direction)
+            self.step()
             time.sleep(0.01)
+
+        self.stop()
 
         # once we have hit the limit switch, we must go to our home configuration step count
         # unfortunately, I believe this will have to be calculated experimentally. 
         # to minimize the error, we should increase the pulse number
         self.has_homed = True
         time.sleep(1) # wait to slow down completely
-        home_count = self.home_count # count to home position
-        self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
-        self.move_absolute_pid(home_count) # move there
+        # home_count = self.home_count # count to home position
+        # self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
+        # self.move_absolute_pid(home_count) # move there
+
+        self.move_clockwise(-20)
         
         # after all homing is complete, we need to reset our position
         self.reset_position()
@@ -202,6 +211,19 @@ class Stepper:
         self.target_pos = 0
         self.current_angle = 0
 
+    def move_clockwise(self, angle):
+        steps = self.calculate_steps(angle)
+        print("number of steps: ",steps)
+        self.direction = Stepper.CW
+        print("direction is: ",self.direction)
+        self.set_direction_pins()
+        print("time for PID")
+        time.sleep(0.5)
+        self.move_absolute_pid(steps)
+    
+    def stop(self):
+        GPIO.output(self.pulse_pin, GPIO.LOW)
+    
     def get_angle(self):
         return self.current_angle
 
@@ -213,4 +235,24 @@ class Stepper:
         """ 
         Stepper.libc.usleep(int(microseconds))
 
-   
+if __name__ == '__main__':
+    pulses_per_rev = 200
+
+    # joint 1
+    pulse_pin_j1 = 32
+    dir_pin_j1 = 22
+    homing_pin_j1 = 40
+    gear_ratio_j1 = 5 * 5.18
+    home_count_j1 = -200
+    max_speed_j1 = 50
+    max_ccw_j1 = 90
+    max_cw_j1 = -90
+    
+    j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, 0.05, 0.03)
+    print("about to move")
+    # j1.move_clockwise(-20)
+    j1.home()
+    
+    print("done")
+    while True:
+        pass

@@ -5,13 +5,13 @@ import time
 GPIO.setmode(GPIO.BOARD)
 
 # Set up GPIO pin 18 as an input
-GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(33, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 try:
     while True:
         # Read the state of the GPIO pin
-        input_state = GPIO.input(13)
-        print("GPIO pin 13 state: ", input_state)
+        input_state = GPIO.input(33)
+        print("GPIO pin 33 state: ", input_state)
         time.sleep(0.1)  # Wait for a short time to avoid flooding the console
 
 except KeyboardInterrupt:

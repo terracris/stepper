@@ -3,6 +3,7 @@ import numpy as np
 from math import radians
 import modern_robotics as mr
 from stepper import Stepper
+from time import sleep
 
 class Arm:
     # I am going to make the arm take in 4 different motors on startup
@@ -55,6 +56,7 @@ class Arm:
 
     # blocking function to home each joint
     def home_joint(self, joint):
+        print("homing joint")
         joint.home()
 
     # theta_list is list of joint angles 
@@ -139,8 +141,8 @@ if __name__ == '__main__':
     dir_pin_j1 = 15
     homing_pin_j1 = 13
     gear_ratio_j1 = 4
-    home_count_j1 = 340
-    max_speed_j1 = 10
+    home_count_j1 = -200
+    max_speed_j1 = 5
     max_ccw_j1 = 90
     max_cw_j1 = -90
 
@@ -150,7 +152,7 @@ if __name__ == '__main__':
     homing_pin_j2 = 33
     gear_ratio_j2 = 5
     home_count_j2 = -1000
-    max_speed_j2 = 10
+    max_speed_j2 = 5
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j2 = 10
@@ -162,25 +164,35 @@ if __name__ == '__main__':
     homing_pin_j3 = 40
     gear_ratio_j3 = 5  # TODO review gear ratio
     home_count_j3 = -1000  # TODO calculate home count
-    max_speed_j3 = 10
+    max_speed_j3 = 5
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j3 = 10  # TODO calculate joint limit
     max_cw_j3 = -135  # TODO calculate joint limit
  
-    # joint 4
+     joint 4
     pulse_pin_j4 = 16
     dir_pin_j4 = 18
     homing_pin_j4 = 38
     gear_ratio_j4 = 5 # TODO calculate gear ratio
     home_count_j4 = -1000 # TODO calculate home count
-    max_speed_j4 = 10
+    max_speed_j4 = 5
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j4 = 10 # TODO calculate joint limits
     max_cw_j4 = -135 # TODO calcylate joint limit
  
-    j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
-    j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
-    j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3)
-    j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4)
+    try:
+        sleep(2)
+        print("setting up the arm")
+        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
+        j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
+        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3)
+        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4)
+       
+        arm = Arm(j1, j2, j3, j4)
+        
+        while True:
+            print("set up!")
+    except KeyboardInterrupt:
+        GPIO.cleanup()
