@@ -130,6 +130,10 @@ class Arm:
             theta_list.append(radians(theta))
         
         return theta_list
+    
+    def cleanup(self):
+        for joint in self.joints:
+            joint.cleanup()
             
 
 if __name__ == '__main__':
@@ -170,7 +174,7 @@ if __name__ == '__main__':
     max_ccw_j3 = 10  # TODO calculate joint limit
     max_cw_j3 = -135  # TODO calculate joint limit
  
-     joint 4
+    # joint 4
     pulse_pin_j4 = 16
     dir_pin_j4 = 18
     homing_pin_j4 = 38
@@ -195,4 +199,4 @@ if __name__ == '__main__':
         while True:
             print("set up!")
     except KeyboardInterrupt:
-        GPIO.cleanup()
+        arm.cleanup()

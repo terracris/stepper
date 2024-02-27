@@ -5,12 +5,13 @@ from math import sqrt
 import Jetson.GPIO as GPIO
 from collections import deque
 
+GPIO.setmode(GPIO.BOARD)
+
 class Stepper:
     CCW = 1
     CW = 0
     libc = ctypes.CDLL("libc.so.6") # Load the C library
     MILLISECONDS_IN_SECOND = 1000    # number of milliseconds in one second
-    GPIO.setmode(GPIO.BOARD)
 
     """
     All motors use CCW as positive direction for rotation.
@@ -31,7 +32,9 @@ class Stepper:
         self.speed = 0
         self.max_speed = max_speed / Stepper.MILLISECONDS_IN_SECOND # our code operates in pulses per millisecond for increased accuracy
         self.acceleration = 0.0 # default to zero until set
-        self.min_pulse_width = 2.5 # the minimum pulse width in seconds (based on stepper driver)
+        self.min_pulse_width = 2.5 # the minimum pulse width in microseconds (based on stepper driver)
+        self.min_enable_setup = 0.2 # the minimum enable time in seconds (200 ms)
+        self.min_dir_width = 5     # the minimum pulse width in microseconds (based on stepper driver)
         self.kp = kp
         self.kd = kd
 
@@ -135,8 +138,9 @@ class Stepper:
     def step(self):
         self.set_direction_pins()
         GPIO.output(self.pulse_pin, GPIO.HIGH)
-        Stepper.usleep(self.min_pulse_width) # TODO need to set minimum pulse width as 2.5 microseconds
+        Stepper.usleep(self.min_pulse_width)
         GPIO.output(self.pulse_pin, GPIO.LOW)
+        Stepper.usleep(self.min_pulse_width)
         
         if self.has_homed:
             self.update_position()
@@ -152,7 +156,11 @@ class Stepper:
             print("ccw")
             GPIO.output(self.dir_pin, GPIO.HIGH) # When direction pin is HIGH, the motor will spin CCW
         else:
+            print("cw")
             GPIO.output(self.dir_pin, GPIO.LOW) # when direction pin is LOW, the motor will spin CW
+
+        Stepper.usleep(self.min_dir_width)
+
 
    # returns time in microseconds since epoch 1970
     @staticmethod 
@@ -168,7 +176,8 @@ class Stepper:
         
         GPIO.output(self.enable_pin, GPIO.LOW) # turn motors on
         GPIO.output(self.dir_pin, GPIO.HIGH)    # HIGH is ccw --> default direction
-        GPIO.output(self.pulse_pin, GPIO.LOW)  # no pulse 
+        GPIO.output(self.pulse_pin, GPIO.LOW)  # no pulse
+        time.sleep(self.min_enable_setup) # minimum enable time is 200 ms 
     
     
     def home(self):
@@ -188,7 +197,7 @@ class Stepper:
             
             print("homing direction is: ", self.direction)
             self.step()
-            time.sleep(0.01)
+            time.sleep(0.01) # sleep 10 ms between pulses --> gives pretty good speed
 
         self.stop()
 
@@ -223,9 +232,13 @@ class Stepper:
     
     def stop(self):
         GPIO.output(self.pulse_pin, GPIO.LOW)
+        Stepper.usleep(self.min_pulse_width)
     
     def get_angle(self):
         return self.current_angle
+    
+    def cleanup(self):
+        GPIO.cleanup()
 
     
     @staticmethod
@@ -248,11 +261,14 @@ if __name__ == '__main__':
     max_ccw_j1 = 90
     max_cw_j1 = -90
     
-    j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, 0.05, 0.03)
-    print("about to move")
-    # j1.move_clockwise(-20)
-    j1.home()
-    
-    print("done")
-    while True:
-        pass
+    try:
+        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, 0.05, 0.03)
+        print("about to move")
+        # j1.move_clockwise(-20)
+        j1.home()
+
+        while True:
+            pass
+    except KeyboardInterrupt:
+        j1.cleanup()
+        print("cleaning properly.")
