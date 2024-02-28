@@ -1,5 +1,6 @@
 import threading
 import numpy as np
+from math import pi, sin, cos
 from math import radians
 import modern_robotics as mr
 from stepper import Stepper
@@ -136,6 +137,80 @@ class Arm:
             joint.cleanup()
             
 
+    def tf_calculation(self, theta1, theta2, theta3, theta4):
+        l1 = 115.905
+        l2 = 111.619
+        l3 = 70
+        l4 = 370.5
+        l5 = 30.5
+        l6 = 475.803
+        
+        t1 = 0
+        d1 = -l1
+        a1 = 0
+        r1 = pi/2
+        
+        t2 = pi/2+theta1
+        d2 = l2
+        a2 = l3
+        r2 = -pi/2
+        
+        t3 = -pi/2+theta2
+        d3 = 0
+        a3 = l4
+        r3 = 0
+        
+        t4 = 0+theta3
+        d4 = 0
+        a4 = l5
+        r4 = -pi/2
+        
+        t5 = pi/2+theta4
+        d5 = l6
+        a5 = 0
+        r5 = 0
+        
+        T12 = [
+            [cos(t1), -sin(t1)*cos(r1), sin(t1)*sin(r1), a1*cos(t1)],
+            [sin(t1), cos(t1)*cos(r1), -cos(t1)*sin(r1), a1*sin(t1)],
+            [0, sin(r1), cos(r1), d1],
+            [0, 0, 0, 1]
+        ]
+
+        T23 = [
+            [cos(t2), -sin(t2)*cos(r2), sin(t2)*sin(r2), a2*cos(t2)],
+            [sin(t2), cos(t2)*cos(r2), -cos(t2)*sin(r2), a2*sin(t2)],
+            [0, sin(r2), cos(r2), d2],
+            [0, 0, 0, 1]
+        ]
+
+        T34 = [
+            [cos(t3), -sin(t3)*cos(r3), sin(t3)*sin(r3), a3*cos(t3)],
+            [sin(t3), cos(t3)*cos(r3), -cos(t3)*sin(r3), a3*sin(t3)],
+            [0, sin(r3), cos(r3), d3],
+            [0, 0, 0, 1]
+        ]
+
+        T45 = [
+            [cos(t4), -sin(t4)*cos(r4), sin(t4)*sin(r4), a4*cos(t4)],
+            [sin(t4), cos(t4)*cos(r4), -cos(t4)*sin(r4), a4*sin(t4)],
+            [0, sin(r4), cos(r4), d4],
+            [0, 0, 0, 1]
+        ]
+
+        T56 = [
+            [cos(t5), -sin(t5)*cos(r5), sin(t5)*sin(r5), a5*cos(t5)],
+            [sin(t5), cos(t5)*cos(r5), -cos(t5)*sin(r5), a5*sin(t5)],
+            [0, sin(r5), cos(r5), d5],
+            [0, 0, 0, 1]
+        ]
+        
+        
+        T0ee = T12*T23*T34*T45*T56
+
+        return T0ee
+        
+        
 if __name__ == '__main__':
     
     pulses_per_rev = 200
