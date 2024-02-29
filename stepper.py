@@ -5,6 +5,9 @@ from math import sqrt
 import Jetson.GPIO as GPIO
 from collections import deque
 
+"""
+Default motor rotation direction is CCW. However, you can set the motor to be inverted
+"""
 GPIO.setmode(GPIO.BOARD)
 
 class Stepper:
@@ -17,12 +20,16 @@ class Stepper:
     All motors use CCW as positive direction for rotation.
     max_speed comes in as pulses per second.
     """
-    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count, kp=0.005, kd=0.003):
+    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count, inverted=False, kp=0.005, kd=0.003):
         self.pulse_pin = pulse_pin
         self.dir_pin = dir_pin
         self.enable_pin = enable_pin
         self.homing_pin = homing_pin
-        self.direction = Stepper.CCW # current direction motor is spinning
+        self.inverted = inverted # changes the positive direction for rotation
+        self.direction = Stepper.CW if inverted else Stepper.CCW # current direction motor is spinning
+        self.homing_direction = Stepper.CW if inverted else Stepper.CCW  # default homing direction is CCW
+        self.positive_direction = Stepper.CW if inverted else Stepper.CCW # defualt positive direction is CCW
+        self.negative_direction = Stepper.CCW if inverted else Stepper.CW # default negative direction is CW
 
         self.current_pos = 0
         self.target_pos = 0
@@ -146,7 +153,7 @@ class Stepper:
             self.update_position()
 
     def update_position(self):
-        if self.direction == Stepper.CCW:
+        if self.direction == self.positive_direction:
             self.current_pos += 1
         else:
             self.current_pos -= 1
@@ -185,7 +192,7 @@ class Stepper:
         is_home = GPIO.input(self.homing_pin)  # reads from homing pin to determine if we are home yet
 
         
-        self.direction = Stepper.CCW  # all motors home in the CCW direction
+        self.direction = self.homing_direction # all motors home in the CCW direction
         while not is_home:
             # if we are not home, we must rotate in our negative direction
             # until the limit switch has been hit
@@ -207,7 +214,7 @@ class Stepper:
         self.has_homed = True
         time.sleep(1) # wait to slow down completely
         home_count = self.home_count # count to home position
-        self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
+        self.direction = self.negative_direction  # we need to move in the opposite to our homing direction
         self.move_absolute_pid(home_count) # move there
 
         # self.move_clockwise(-20)
@@ -256,7 +263,7 @@ if __name__ == '__main__':
     dir_pin_j1 = 38
     homing_pin_j1 = 40
     gear_ratio_j1 = 1
-    home_count_j1 = -148
+    home_count_j1 = 148
     max_speed_j1 = 50
     max_ccw_j1 = 90
     max_cw_j1 = -90
