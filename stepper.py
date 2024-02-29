@@ -259,11 +259,11 @@ if __name__ == '__main__':
     pulses_per_rev = 200
 
     # joint 1
-    pulse_pin_j1 = 32
-    dir_pin_j1 = 38
-    homing_pin_j1 = 40
-    gear_ratio_j1 = 1
-    home_count_j1 = 148
+    pulse_pin_j1 = 29
+    dir_pin_j1 = 31
+    homing_pin_j1 = 33
+    gear_ratio_j1 = 5 * 5.18
+    home_count_j1 = -147
     max_speed_j1 = 50
     max_ccw_j1 = 90
     max_cw_j1 = -90
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     # GPIO.output(pulse_pin_j4, GPIO.LOW)
     
     try:
-        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1)
+        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, True)
         print("about to move")
         # j1.move_clockwise(-20)
         j1.home()

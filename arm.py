@@ -43,7 +43,7 @@ class Arm:
         threads = []
 
         for joint in self.joints:
-            thread = threading.Thread(target=self.home_joint, args=(joint))
+            thread = threading.Thread(target=self.home_joint, args=(joint,))
             thread.start()
             threads.append(thread)
 
@@ -142,44 +142,44 @@ if __name__ == '__main__':
     
     # joint 1
     pulse_pin_j1 = 11
-    dir_pin_j1 = 15
-    homing_pin_j1 = 13
+    dir_pin_j1 = 13
+    homing_pin_j1 = 15
     gear_ratio_j1 = 4
     home_count_j1 = -200
-    max_speed_j1 = 5
+    max_speed_j1 = 50
     max_ccw_j1 = 90
     max_cw_j1 = -90
 
     # joint 2
-    pulse_pin_j2 = 31
-    dir_pin_j2 = 37
-    homing_pin_j2 = 33
-    gear_ratio_j2 = 5
-    home_count_j2 = -1000
-    max_speed_j2 = 5
+    pulse_pin_j2 = 19
+    dir_pin_j2 = 21
+    homing_pin_j2 = 23
+    gear_ratio_j2 = 5 * 5.18
+    home_count_j2 = -400
+    max_speed_j2 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j2 = 10
     max_cw_j2 = -135
 
     # joint 3
-    pulse_pin_j3 = 36
-    dir_pin_j3 = 22
-    homing_pin_j3 = 40
-    gear_ratio_j3 = 5  # TODO review gear ratio
+    pulse_pin_j3 = 29
+    dir_pin_j3 = 31
+    homing_pin_j3 = 33
+    gear_ratio_j3 = 5 * 5.18  # TODO review gear ratio
     home_count_j3 = -1000  # TODO calculate home count
-    max_speed_j3 = 5
+    max_speed_j3 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
     max_ccw_j3 = 10  # TODO calculate joint limit
     max_cw_j3 = -135  # TODO calculate joint limit
  
     # joint 4
-    pulse_pin_j4 = 16
-    dir_pin_j4 = 18
-    homing_pin_j4 = 38
-    gear_ratio_j4 = 5 # TODO calculate gear ratio
-    home_count_j4 = -1000 # TODO calculate home count
+    pulse_pin_j4 = 32
+    dir_pin_j4 = 38
+    homing_pin_j4 = 40
+    gear_ratio_j4 = 1 # TODO calculate gear ratio
+    home_count_j4 = -25 # TODO calculate home count
     max_speed_j4 = 5
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
@@ -187,12 +187,12 @@ if __name__ == '__main__':
     max_cw_j4 = -135 # TODO calcylate joint limit
  
     try:
-        sleep(2)
+        sleep(1)
         print("setting up the arm")
         j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
         j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
-        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3)
-        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4)
+        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3, True)
+        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4, True)
        
         arm = Arm(j1, j2, j3, j4)
         
