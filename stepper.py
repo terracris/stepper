@@ -206,11 +206,11 @@ class Stepper:
         # to minimize the error, we should increase the pulse number
         self.has_homed = True
         time.sleep(1) # wait to slow down completely
-        # home_count = self.home_count # count to home position
-        # self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
-        # self.move_absolute_pid(home_count) # move there
+        home_count = self.home_count # count to home position
+        self.direction = Stepper.CW  # we need to move in the opposite to our homing direction
+        self.move_absolute_pid(home_count) # move there
 
-        self.move_clockwise(-20)
+        # self.move_clockwise(-20)
         
         # after all homing is complete, we need to reset our position
         self.reset_position()
@@ -253,16 +253,28 @@ if __name__ == '__main__':
 
     # joint 1
     pulse_pin_j1 = 32
-    dir_pin_j1 = 22
+    dir_pin_j1 = 38
     homing_pin_j1 = 40
-    gear_ratio_j1 = 5 * 5.18
-    home_count_j1 = -200
+    gear_ratio_j1 = 1
+    home_count_j1 = -148
     max_speed_j1 = 50
     max_ccw_j1 = 90
     max_cw_j1 = -90
+   
+    # pulse_pin_j2 = 19
+    # pulse_pin_j3 = 29
+    # pulse_pin_j4 = 36
+
+    # GPIO.setup(pulse_pin_j2, GPIO.OUT)
+    # GPIO.setup(pulse_pin_j3, GPIO.OUT)
+    # GPIO.setup(pulse_pin_j4, GPIO.OUT)
+
+    # GPIO.output(pulse_pin_j2, GPIO.LOW)
+    # GPIO.output(pulse_pin_j3, GPIO.LOW)
+    # GPIO.output(pulse_pin_j4, GPIO.LOW)
     
     try:
-        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, 0.05, 0.03)
+        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1)
         print("about to move")
         # j1.move_clockwise(-20)
         j1.home()
