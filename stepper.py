@@ -131,7 +131,7 @@ class Stepper:
             self.step_interval = 1 / v_t  # [ ms period between each pulse ]
 
             if Stepper.get_time() - start_time >= self.step_interval:
-                print(self.current_pos, v_t, self.direction)
+                # print(self.current_pos, v_t, self.direction)
                 self.step()
                 start_time = Stepper.get_time()
                 prev_error = error
@@ -160,10 +160,10 @@ class Stepper:
     
     def set_direction_pins(self):
         if self.direction == Stepper.CCW:
-            print("ccw")
+            # print("ccw")
             GPIO.output(self.dir_pin, GPIO.HIGH) # When direction pin is HIGH, the motor will spin CCW
         else:
-            print("cw")
+            # print("cw")
             GPIO.output(self.dir_pin, GPIO.LOW) # when direction pin is LOW, the motor will spin CW
 
         Stepper.usleep(self.min_dir_width)
@@ -202,7 +202,7 @@ class Stepper:
             if is_home:
                 break
             
-            print("homing direction is: ", self.direction)
+            # print("homing direction is: ", self.direction)
             self.step()
             time.sleep(0.01) # sleep 10 ms between pulses --> gives pretty good speed
 
@@ -212,7 +212,7 @@ class Stepper:
         # unfortunately, I believe this will have to be calculated experimentally. 
         # to minimize the error, we should increase the pulse number
         self.has_homed = True
-        time.sleep(1) # wait to slow down completely
+        time.sleep(0.05) # wait to slow down completely
         home_count = self.home_count # count to home position
         self.direction = self.negative_direction  # we need to move in the opposite to our homing direction
         self.move_absolute_pid(home_count) # move there
@@ -229,11 +229,11 @@ class Stepper:
 
     def move_clockwise(self, angle):
         steps = self.calculate_steps(angle)
-        print("number of steps: ",steps)
+        #print("number of steps: ",steps)
         self.direction = Stepper.CW
-        print("direction is: ",self.direction)
+        #print("direction is: ",self.direction)
         self.set_direction_pins()
-        print("time for PID")
+        # print("time for PID")
         time.sleep(0.5)
         self.move_absolute_pid(steps)
     
@@ -255,39 +255,3 @@ class Stepper:
         """ 
         Stepper.libc.usleep(int(microseconds))
 
-if __name__ == '__main__':
-    pulses_per_rev = 200
-
-    # joint 1
-    pulse_pin_j1 = 29
-    dir_pin_j1 = 31
-    homing_pin_j1 = 33
-    gear_ratio_j1 = 5 * 5.18
-    home_count_j1 = -147
-    max_speed_j1 = 50
-    max_ccw_j1 = 90
-    max_cw_j1 = -90
-   
-    # pulse_pin_j2 = 19
-    # pulse_pin_j3 = 29
-    # pulse_pin_j4 = 36
-
-    # GPIO.setup(pulse_pin_j2, GPIO.OUT)
-    # GPIO.setup(pulse_pin_j3, GPIO.OUT)
-    # GPIO.setup(pulse_pin_j4, GPIO.OUT)
-
-    # GPIO.output(pulse_pin_j2, GPIO.LOW)
-    # GPIO.output(pulse_pin_j3, GPIO.LOW)
-    # GPIO.output(pulse_pin_j4, GPIO.LOW)
-    
-    try:
-        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, True)
-        print("about to move")
-        # j1.move_clockwise(-20)
-        j1.home()
-
-        while True:
-            pass
-    except KeyboardInterrupt:
-        j1.cleanup()
-        print("cleaning properly.")

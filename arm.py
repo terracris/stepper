@@ -155,7 +155,7 @@ if __name__ == '__main__':
     dir_pin_j2 = 21
     homing_pin_j2 = 23
     gear_ratio_j2 = 5 * 5.18
-    home_count_j2 = -400
+    home_count_j2 = -160
     max_speed_j2 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     dir_pin_j3 = 31
     homing_pin_j3 = 33
     gear_ratio_j3 = 5 * 5.18  # TODO review gear ratio
-    home_count_j3 = -1000  # TODO calculate home count
+    home_count_j3 = -500  # TODO calculate home count
     max_speed_j3 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
@@ -191,12 +191,14 @@ if __name__ == '__main__':
         print("setting up the arm")
         j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
         j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
-        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3, True)
-        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4, True)
+        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3, True, 0.10, 0.003)
+        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4, True, 0.10, 0.003)
        
         arm = Arm(j1, j2, j3, j4)
         
+        print("set up!")
+        
         while True:
-            print("set up!")
+            pass
     except KeyboardInterrupt:
         arm.cleanup()
