@@ -20,14 +20,14 @@ class Stepper:
     All motors use CCW as positive direction for rotation.
     max_speed comes in as pulses per second.
     """
-    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count, homing_direction ,inverted=False, kp=0.005, kd=0.003, has_homed = False):
+    def __init__(self, pulse_pin, dir_pin, enable_pin, homing_pin, steps_per_rev, gear_ratio, max_speed, max_joint_ccw, max_joint_cw, home_count, inverted=False, kp=0.005, kd=0.003, has_homed = False):
         self.pulse_pin = pulse_pin
         self.dir_pin = dir_pin
         self.enable_pin = enable_pin
         self.homing_pin = homing_pin
         self.inverted = inverted # changes the positive direction for rotation
         self.direction = Stepper.CW if inverted else Stepper.CCW # current direction motor is spinning
-        self.homing_direction = homing_direction  # default homing direction is CCW
+        self.homing_direction = Stepper.CW if inverted else Stepper.CCW  # default homing direction is CCW
         self.positive_direction = Stepper.CW if inverted else Stepper.CCW # defualt positive direction is CCW
         self.negative_direction = Stepper.CCW if inverted else Stepper.CW # default negative direction is CW
 
@@ -218,17 +218,9 @@ class Stepper:
         # to minimize the error, we should increase the pulse number
         self.has_homed = True
         time.sleep(0.05) # wait to slow down completely
-        home_count = abs(self.home_count) # count to home position
-        self.direction = Stepper.CW if self.homing_direction == Stepper.CCW else Stepper.CCW  # we need to move in the opposite to our homing direction
-        
-        cur_pos = 0
-        while cur_pos < home_count:
-            self.step()
-            time.sleep(0.01)
-            cur_pos += 1
-        
-        
-        #self.move_absolute_pid(home_count) # move there
+        home_count = self.home_count # count to home position
+        self.direction = self.negative_direction  # we need to move in the opposite to our homing direction
+        self.move_absolute_pid(home_count) # move there
 
         # after all homing is complete, we need to reset our position
         self.reset_position()
@@ -266,4 +258,51 @@ class Stepper:
         """ 
         Stepper.libc.usleep(int(microseconds))
 
+
+if __name__ == '__main__':
+
+    # joint 3
+    pulse_pin_j3 = 29
+    dir_pin_j3 = 31
+    homing_pin_j3 = 33
+    gear_ratio_j3 = 4 * 5.18  # TODO review gear ratio
+    home_count_j3 = -695  # TODO calculate home count
+    max_speed_j3 = 50
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
+    max_ccw_j3 = 90  # TODO calculate joint limit
+    max_cw_j3 = -90  # TODO calculate joint limito
+    pulses_per_rev = 200
+
+     # joint 2
+    pulse_pin_j2 = 19
+    dir_pin_j2 = 21
+    homing_pin_j2 = 23
+    gear_ratio_j2 = 5 * 5.18
+    home_count_j2 = -145
+    max_speed_j2 = 50
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
+    max_ccw_j2 = 135
+    max_cw_j2 = -10
+
+    # joint 4
+    pulse_pin_j4 = 32
+    dir_pin_j4 = 38
+    homing_pin_j4 = 40
+    gear_ratio_j4 = 1 # TODO calculate gear ratio
+    home_count_j4 = -30 # TODO calculate home count
+    max_speed_j4 = 5
+    # gonna need to update kinematics to account for the joint limits:
+    # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
+    max_ccw_j4 = 90 # TODO calculate joint limits
+    max_cw_j4 = -40 # TODO calcylate joint limit
+
+    j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2,inverted=True, has_homed=True)
+
+    j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3,kp=0.10,kd=0.003, has_homed=True)
+
+    j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4, kp=1, kd=0.003, has_homed=True)
+    
+    j4.write(45)
 

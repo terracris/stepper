@@ -1,6 +1,6 @@
 import threading
 import numpy as np
-from math import radians
+from math import radians, degrees
 import modern_robotics as mr
 from stepper import Stepper
 from time import sleep
@@ -68,7 +68,7 @@ class Arm:
         ik, _ = mr.IKinSpace(self.twist_list, self.M, desired_ee, self.theta_list_guess, self.eomg, self.ev)
         return ik
     
-    def traj_planning(self, ik):
+    def trajectory_planning(self, ik):
         
         tf = 5     # time of motion [ s ]
         N = 5      # number of points in trajectory
@@ -86,7 +86,7 @@ class Arm:
 
         # ALWAYS SKIP THE FIRST TRAJECTORY --> you are already there.
 
-        for point in range(1, num_trajecory_points + 1):
+        for point in range(1, num_trajecory_points):
             joint_pose = trajecory[point]
             self.write_joints(joint_pose)
 
@@ -98,7 +98,7 @@ class Arm:
         for joint, joint_angle in zipped:
             thread = threading.Thread(target=self.write_joint, args=(joint, joint_angle))
             thread.start()
-            threads.append()
+            threads.append(thread)
 
         # wait for each joint to reach its position
         for thread in threads:
@@ -112,7 +112,7 @@ class Arm:
     def write_joint(self, joint, joint_angle):
         # TODO make write in stepper library return the actual angle of the joint
         # because of our step angle resolution there is error --> this will help account for the error in pose
-        return joint.write(joint_angle) # writes angle to joint --> needs to be threading though
+        return joint.write(degrees(joint_angle)) # writes angle to joint --> needs to be threading though
 
     def update_angles(self, joint_angles):
         
@@ -145,58 +145,74 @@ if __name__ == '__main__':
     dir_pin_j1 = 13
     homing_pin_j1 = 15
     gear_ratio_j1 = 4
-    home_count_j1 = -200
+    home_count_j1 = -140
     max_speed_j1 = 50
     max_ccw_j1 = 90
     max_cw_j1 = -90
+    homing_direction_j1 = Stepper.CCW
 
     # joint 2
     pulse_pin_j2 = 19
     dir_pin_j2 = 21
     homing_pin_j2 = 23
     gear_ratio_j2 = 5 * 5.18
-    home_count_j2 = -160
+    home_count_j2 = -145
     max_speed_j2 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
-    max_ccw_j2 = 10
-    max_cw_j2 = -135
+    max_ccw_j2 = 135
+    max_cw_j2 = -10
+    homing_direction_j2 = Stepper.CCW
 
     # joint 3
     pulse_pin_j3 = 29
     dir_pin_j3 = 31
     homing_pin_j3 = 33
-    gear_ratio_j3 = 5 * 5.18  # TODO review gear ratio
-    home_count_j3 = -500  # TODO calculate home count
+    gear_ratio_j3 = 4 * 5.18  # TODO review gear ratio
+    home_count_j3 = -740  # TODO calculate home count
     max_speed_j3 = 50
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
-    max_ccw_j3 = 10  # TODO calculate joint limit
-    max_cw_j3 = -135  # TODO calculate joint limit
+    max_ccw_j3 = 90  # TODO calculate joint limit
+    max_cw_j3 = -90  # TODO calculate joint limit
+    homing_direction_j3 = Stepper.CW
  
     # joint 4
     pulse_pin_j4 = 32
     dir_pin_j4 = 38
     homing_pin_j4 = 40
     gear_ratio_j4 = 1 # TODO calculate gear ratio
-    home_count_j4 = -25 # TODO calculate home count
+    home_count_j4 = -30 # TODO calculate home count
     max_speed_j4 = 5
     # gonna need to update kinematics to account for the joint limits:
     # like if it says j2 goes to 30 degrees, need to find clockwise alternative for all joints
-    max_ccw_j4 = 10 # TODO calculate joint limits
-    max_cw_j4 = -135 # TODO calcylate joint limit
+    max_ccw_j4 = 90 # TODO calculate joint limits
+    max_cw_j4 = -40 # TODO calcylate joint limit
+    homing_direction_j4 = Stepper.CW
  
     try:
         sleep(1)
         print("setting up the arm")
-        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1) 
-        j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2)
-        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3, True, 0.10, 0.003)
-        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4, True, 0.10, 0.003)
+        j1 = Stepper(pulse_pin_j1, dir_pin_j1, 12, homing_pin_j1, pulses_per_rev, gear_ratio_j1, max_speed_j1, max_ccw_j1, max_cw_j1, home_count_j1, homing_direction_j1) 
+        j2 = Stepper(pulse_pin_j2, dir_pin_j2, 12, homing_pin_j2, pulses_per_rev, gear_ratio_j2, max_speed_j2, max_ccw_j2, max_cw_j2, home_count_j2,homing_direction_j2 ,inverted=True)
+        j3 = Stepper(pulse_pin_j3, dir_pin_j3, 12, homing_pin_j3, pulses_per_rev, gear_ratio_j3, max_speed_j3, max_ccw_j3, max_cw_j3, home_count_j3,homing_direction_j3,kp=0.10,kd=0.003)
+        j4 = Stepper(pulse_pin_j4, dir_pin_j4, 12, homing_pin_j4, pulses_per_rev, gear_ratio_j4, max_speed_j4, max_ccw_j4, max_cw_j4, home_count_j4,homing_direction_j4,kp=1,kd=0.003)
        
         arm = Arm(j1, j2, j3, j4)
+        x = 0.4
+        y = 0.0
+        z = 0.45
+
+        desired_ee = np.array([[ 7.07106781e-01,  7.13299383e-17, -7.07106781e-01,  2.22839249e-01],
+                               [-7.07106781e-01,  8.56793076e-17, -7.07106781e-01, -1.97241984e-01],
+                               [-1.01465364e-17,  1.00000000e+00,  1.11022302e-16,  7.07300528e-01],
+                               [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
+
+        joint_angles = arm.ik(desired_ee)
+        traj = arm.trajectory_planning(joint_angles)
+        arm.follow_trajectory(traj)
         
-        print("set up!")
+        print("I am there!")
         
         while True:
             pass
