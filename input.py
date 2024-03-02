@@ -10,13 +10,13 @@ input_3 = 33
 input_4 = 40
 
 # Set up GPIO pin 18 as an input
-GPIO.setup(input_4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(input_3, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 try:
     while True:
         # Read the state of the GPIO pin
-        input_state = GPIO.input(input_4)
-        print("GPIO pin ", input_4, " state: ", input_state)
+        input_state = GPIO.input(input_3)
+        print("GPIO pin ", input_3, " state: ", input_state)
         time.sleep(0.1)  # Wait for a short time to avoid flooding the console
 
 except KeyboardInterrupt:

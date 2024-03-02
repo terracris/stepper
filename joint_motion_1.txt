@@ -1,0 +1,27 @@
+setting up the arm
+homing joint
+homing joint
+homing joint
+homing joint
+All threads finished
+steps to travel to -10
+steps to travel to 67
+steps to travel to -54
+steps to travel to 5
+All threads finished
+steps to travel to -50
+steps to travel to 324
+steps to travel to -259
+steps to travel to 25
+All threads finished
+steps to travel to -90
+steps to travel to 580
+steps to travel to -464
+steps to travel to 45
+All threads finished
+steps to travel to -100
+steps to travel to 648
+steps to travel to -518
+steps to travel to 50
+All threads finished
+I am there!
